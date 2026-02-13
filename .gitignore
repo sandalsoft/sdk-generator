@@ -1,0 +1,30 @@
+# UPDATED 9/24/2025
+
+# DAMN YOU MACOS FINDER 🖕
+.DS_Store
+
+.env
+
+# Always check-in examples
+!.env.example
+!.env_example
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+
+# Dependency directories
+node_modules
+
+# vim
+.*.sw*
+Session.vim
+
+# Always include everything in ./src even if it matches a pattern below
+!src/
+
+# Build directory
+dist/*
