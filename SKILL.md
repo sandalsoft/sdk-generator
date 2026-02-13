@@ -45,6 +45,10 @@ npm --version
 # Install if missing
 pip install requests httpx pydantic pytest pytest-asyncio respx --break-system-packages
 npm install -g typescript jest ts-jest @types/jest axios
+
+# Optional: for browser-based login during authenticated discovery
+pip install playwright --break-system-packages
+playwright install chromium
 ```
 
 ---
@@ -60,27 +64,46 @@ npm install -g typescript jest ts-jest @types/jest axios
 
 ### Phase 1: API Discovery
 
-Read `references/discovery.md` for the full procedure.
+Read `references/discovery.md` and `agents/discovery.md` for the full procedure.
 
 Two entry paths, same output:
 
 **Path A — Live Website:**
 1. Accept a base URL from the user
-2. Use browser automation or HTTP crawling to navigate the site
-3. Intercept and record all API calls (XHR/fetch requests)
-4. Capture: method, URL pattern, headers, query params, request body, response body, status codes
-5. Identify authentication patterns (Bearer tokens, API keys, cookies, OAuth flows)
+2. Resolve authentication credentials (see below)
+3. Use browser automation or HTTP crawling to navigate the site
+4. Intercept and record all API calls (XHR/fetch requests)
+5. Capture: method, URL pattern, headers, query params, request body, response body, status codes
+6. Identify authentication patterns (Bearer tokens, API keys, cookies, OAuth flows)
 
 **Path B — HAR Archive:**
 1. Accept a .har file from the user
 2. Parse all entries, filtering to API-like requests (JSON responses, REST patterns)
 3. Extract the same data points as Path A
-4. Group by logical endpoint (normalize URL path parameters)
+4. Detect auth patterns from captured headers, then redact all sensitive values
+5. Group by logical endpoint (normalize URL path parameters)
+
+**Authentication:** If the target site requires authentication, credentials can be
+provided through multiple channels (see `agents/discovery.md` for full details):
+
+| Method | Example |
+|--------|---------|
+| Inline in prompt | `Crawl https://app.example.com with bearer token: "eyJ..."` |
+| Environment variables | `SDK_GEN_AUTH_TOKEN`, `SDK_GEN_AUTH_COOKIE`, `SDK_GEN_AUTH_HEADER_NAME`/`VALUE` |
+| Browser login (Playwright) | Agent opens a browser, user or automation completes login, agent extracts session |
+| MCP browser server | If available, use browser MCP tools for login and credential extraction |
+
+For OAuth/SSO flows that require user interaction (consent screens, MFA), the agent
+launches a visible browser window and guides the user through the login. After login
+completes, session cookies and tokens are extracted automatically.
+
+Inline credentials take precedence over env vars. Browser login is used as a fallback
+when no static credentials are available.
 
 **Output:** An `api-surface.json` file containing every discovered endpoint with:
 - Method + URL pattern (with path params identified like `/users/{id}`)
 - Request/response schemas (inferred JSON schemas)
-- Required headers and auth patterns
+- Required headers and auth patterns (with credential values redacted)
 - Observed status codes and error shapes
 - Pagination patterns if detected
 

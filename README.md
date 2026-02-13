@@ -45,6 +45,10 @@ pip install httpx pydantic pytest pytest-asyncio respx
 
 # TypeScript SDK dependencies
 npm install -g typescript jest ts-jest @types/jest axios
+
+# Optional: browser-based login for authenticated API discovery
+pip install playwright
+playwright install chromium
 ```
 
 ## Usage
@@ -62,6 +66,30 @@ Reverse-engineer the API at https://api.example.com and build typed clients
 ```
 Update the SDK in ./my-sdk/ — the API has new endpoints
 ```
+
+### Authenticated APIs
+
+For APIs that require authentication, provide credentials inline or via environment variables:
+
+```
+# Inline credentials (cookie, bearer token, or custom header)
+Crawl https://app.example.com using cookie: "session=abc123; csrf_token=xyz789"
+Crawl https://api.example.com with bearer token: "eyJhbGciOiJIUzI1NiIs..."
+Crawl https://api.example.com with header X-API-Key: "sk-live-abc123"
+```
+
+```bash
+# Or set environment variables before running
+export SDK_GEN_AUTH_TOKEN="eyJhbGciOiJIUzI1NiIs..."
+export SDK_GEN_AUTH_COOKIE="session=abc123"
+export SDK_GEN_AUTH_HEADER_NAME="X-API-Key"
+export SDK_GEN_AUTH_HEADER_VALUE="sk-live-abc123"
+```
+
+If you don't have credentials handy, the agent can launch a browser window (via
+Playwright or an MCP browser server) for you to log in interactively. For OAuth/SSO
+flows, the agent opens a visible browser, guides you through login, and then
+automatically extracts the session cookies and tokens.
 
 Claude handles the rest: discovery, planning, review, code generation, testing, and git management.
 
@@ -96,7 +124,7 @@ Claude handles the rest: discovery, planning, review, code generation, testing, 
 
 The skill coordinates four specialized agents:
 
-- **Discovery agent** — Crawls websites or parses HAR files. Normalizes URLs, infers JSON schemas, detects auth patterns (Bearer, API key, OAuth, cookies).
+- **Discovery agent** — Crawls websites or parses HAR files. Normalizes URLs, infers JSON schemas, detects auth patterns (Bearer, API key, OAuth, cookies). Supports authenticated discovery via inline credentials, environment variables, or browser-based login (Playwright / MCP) with guided OAuth/SSO flows.
 - **Reviewer agent** — Reviews the SDK plan for naming consistency, type safety, missing error cases, and pagination patterns. Produces approve/suggest/reject verdicts.
 - **Generator agent** — Writes SDK code in dependency order with full docstrings, type hints, and matching test files. Commits each resource module atomically.
 - **Test fixer agent** — Parses failures, diagnoses root causes, applies minimal fixes, and re-runs. Gives up after 5 attempts and moves on rather than blocking.
